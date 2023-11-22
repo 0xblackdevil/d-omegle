@@ -24,8 +24,7 @@ export default function Home() {
           </h1>
 
           <p className="mt-4 max-w-xl sm:text-xl/relaxed">
-            Lorem ipsum dolor sit amet consectetur, adipisicing elit. Nesciunt
-            illo tenetur fuga ducimus numquam ea!
+          Get ready to dazzle with your best smile 😊, as you're about to enter a whole new world of strangers.
           </p>
 
           <div className="mt-8 flex flex-wrap justify-center gap-4">

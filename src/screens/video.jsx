@@ -5,75 +5,96 @@ import {
   VideoCallStatus,
 } from "@pushprotocol/restapi";
 import { Video, initVideoCallData } from "@pushprotocol/restapi/src/lib/video";
-
-import React, { useEffect, useRef, useState } from "react";
+import { useMetaMask } from "metamask-react";
+import React, { useEffect, useState } from "react";
 import walletSigner from "../services/signer.jsx";
 import { ENV } from "@pushprotocol/restapi/src/lib/constants.js";
 
 export default function VideoScreen() {
+  const { account } = useMetaMask();
+  const [num, setNum] = useState(0);
 
-  const env = ENV.STAGING;
-  // const [data, setData] = useState<PushAPI.videoCallData>(null);
+  const [videoInstance, setVideoInstance] = useState(null);
+  const [userAlice, setUserAlice] = useState(null);
+
+  const initVideoCallData = {
+    meta: {
+      chatId: "",
+      initiator: {
+        address: "",
+        signal: null,
+      },
+    },
+    local: {
+      stream: null,
+      audio: null,
+      video: null,
+      address: "",
+    },
+    incoming: [
+      {
+        stream: null,
+        audio: null,
+        video: null,
+        address: "",
+        status: VideoCallStatus.UNINITIALIZED, // call is at the UNINITIALIZED status
+        retryCount: 0,
+      },
+    ],
+  };
 
   const pushInit = async () => {
-    const userAlice = await PushAPI.initialize(walletSigner, {
-      env: "staging",
-    });
+    setUserAlice(
+      await PushAPI.initialize(walletSigner, {
+        env: ENV.STAGING,
+      })
+    );
     const pushProfile = await userAlice.info();
 
     const signer = walletSigner;
     const chainId = 5;
     const pgpPrivateKey = pushProfile.encryptedPrivateKey;
-    const env = "staging";
-    const videoCallData = PushAPI.videoCallData;
 
-    const videoInstance = new Video({
-      signer: signer,
-      chainId: chainId,
-      pgpPrivateKey: pgpPrivateKey,
-      setData: (fn) => {
-        fn((data) => ({
-          ...data,
-          meta: { ...data.meta, chatId: chainId },
-        }));
-      },
-      // Other options...
-    });
+    setVideoInstance(
+      new Video({
+        signer: signer,
+        chainId: chainId,
+        pgpPrivateKey: pgpPrivateKey,
+        setData: () => Video.initVideoCallData,
+      })
+    );
 
     console.log(userAlice);
+    console.log(videoInstance.data);
 
-    videoInstance.create(/* options */);
+    await videoInstance.create({
+      video: true,
+      audio: true,
+      stream: userAlice.stream,
+    });
+  };
 
-    videoInstance.request({
-      senderAddress: signer.address,
+  const callRequest = async () => {
+    const requestResponse = await videoInstance.request({
+      senderAddress: account,
       recipientAddress: "0xb7Ce9a6ff1cB548383d2AA4202E763e6C529928a", // see supported wallet standards - https://push.org/docs/video/supported-wallet-standards
-      chatId: chainId,
+      chatId: "",
+      onReceiveMessage: () => "from domagle",
+      retry: false,
     });
 
-    console.log(videoInstance);
+    console.log(requestResponse);
+  };
 
-    // userAlice.chat.decrypt
-    // const videoCallData = new PushAPI.videoCallData();
-    // const videoCallData = new Video({
-    //   signer,
-    //   chainId,
-    //   pgpPrivateKey,
-    //   env,
-    //   initVideoCallData,
-    // });
-
-    // console.log(videoCallData);
-
-    // const videoCallData = await initVideoCallData({
-    //   signer: walletSigner,
-    //   chainId: 0xaa36a7,
-    //   pgpPrivateKey: pushProfile.encryptedPrivateKey,
-
-    // });
+  const matchPair = async (max, min) => {
+    const user2 = Math.floor(Math.random() * (max - min + 1)) + min;
+    console.log(user2);
+    return user2;
   };
 
   useEffect(() => {
-    // pushInit();
+    pushInit();
+    setNum(matchPair(0, 5));
   }, []);
 
   return (
@@ -86,6 +107,8 @@ export default function VideoScreen() {
       /> */}
 
       <h1>Video Streaming</h1>
+
+      <button type="button" onClick={callRequest}> start call</button>
     </div>
   );
 }

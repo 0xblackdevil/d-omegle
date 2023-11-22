@@ -1,5 +1,5 @@
 import { useMetaMask } from "metamask-react";
-import VideoScreen from "./screens/video";
+import PeerVideo from "./screens/peer-video.jsx";
 import Home from "./screens/home";
 
 export default function App() {
@@ -14,7 +14,7 @@ export default function App() {
 
   if (status === "connecting") return <div>Connecting...</div>;
 
-  if (status === "connected") return chainId === "0x5" ? <VideoScreen /> : <Home />;
+  if (status === "connected") return chainId === "0x5" ? <PeerVideo /> : <Home />;
 
   return null;
 }
