@@ -5,6 +5,7 @@ import { useMetaMask } from "metamask-react";
 export default function PeerVideo() {
   const [stream, setStream] = useState(null);
   const [peer, setPeer] = useState(null);
+  
   const userVideo = useRef();
   const partnerVideo = useRef();
 
@@ -29,34 +30,47 @@ export default function PeerVideo() {
       trickle: false,
       stream: stream,
     });
-
-    newPeer.on("signal", async  (data) => {
-      console.log(`sender ${account} data: `, data);
+  
+    newPeer.on("signal", (data) => {
+      console.log(`Initiator Signal Data: `, data);
+      // Typically, you'd send this data to the other peer via some signaling method
     });
-
+  
+    newPeer.on('error', err => {
+      console.error('Error with initiator peer', err);
+    });
+  
     setPeer(newPeer);
   };
-
-  // Function to handle the incoming signal data
-  const handleSignal = (signalData) => {
+  
+  const handleSignal = () => {
+    const signalingData = document.getElementById("signalingInput").value;
+    const parsedData = JSON.parse(signalingData);
+  
     const newPeer = new Peer({
       initiator: false,
       trickle: false,
       stream: stream,
     });
-
-    newPeer.signal(signalData);
-
+  
+    newPeer.signal(parsedData);
+  
     newPeer.on("signal", (data) => {
-      console.log("receiver data: ", data);
+      console.log("Receiver Signal Data: ", data);
+      // Typically, you'd send this data back to the initiator
     });
-
+  
     newPeer.on("stream", (partnerStream) => {
+      console.log("Received partner stream");
       if (partnerVideo.current) {
         partnerVideo.current.srcObject = partnerStream;
       }
     });
-
+  
+    newPeer.on('error', err => {
+      console.error('Error with receiver peer', err);
+    });
+  
     setPeer(newPeer);
   };
 
@@ -64,8 +78,9 @@ export default function PeerVideo() {
     <div>
       <video ref={userVideo} autoPlay muted playsInline />
       <video ref={partnerVideo} autoPlay playsInline />
-      <button onClick={callPeer}>Start Call</button>
-      {/* Implement input or mechanism to receive and handle signal data */}
+      <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-5" onClick={callPeer}>Start Call</button>
+      <textarea id="signalingInput" placeholder="Paste signaling data here"></textarea>
+      <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={handleSignal}>Recive Call</button>
     </div>
   );
 }
