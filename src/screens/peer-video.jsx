@@ -1,86 +1,102 @@
-import React, { useState, useEffect, useRef } from "react";
-import Peer from "simple-peer";
-import { useMetaMask } from "metamask-react";
+import React, {  useEffect, useRef } from "react";
+import Navbar from "./navbar";
 
 export default function PeerVideo() {
-  const [stream, setStream] = useState(null);
-  const [peer, setPeer] = useState(null);
-  
+
   const userVideo = useRef();
   const partnerVideo = useRef();
-
-  const { account } = useMetaMask();
+  const textref = useRef();
+  const pc = useRef(new RTCPeerConnection(null));
 
   // Access the user's media devices
   useEffect(() => {
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
       .then((currentStream) => {
-        setStream(currentStream);
-        if (userVideo.current) {
-          userVideo.current.srcObject = currentStream;
-        }
+        userVideo.current.srcObject = currentStream;
+        
+        currentStream.getTracks().forEach(track => {
+          _pc.addTrack(track, currentStream);
+        })
+      }).catch(error => {
+        console.log("Error: ", error);
       });
+
+    const _pc = new RTCPeerConnection(null);
+
+    _pc.onicecandidate = (e) => {
+      if (e.candidate) {
+        console.log(JSON.stringify(e.candidate));
+      }
+    }
+
+    // represent state
+    // connection ... disconnection ... failed ... closed
+    _pc.oniceconnectionstatechange = (e) => {
+      console.log(e);
+    }
+
+    _pc.ontrack = (e) => {
+      // we gor remot stream...
+      partnerVideo.current.srcObject = e.streams[0];
+    }
+
+    pc.current = _pc;
   }, []);
 
-  // Function to initiate a call
-  const callPeer = () => {
-    const newPeer = new Peer({
-      initiator: true,
-      trickle: false,
-      stream: stream,
-    });
-  
-    newPeer.on("signal", (data) => {
-      console.log(`Initiator Signal Data: `, data);
-      // Typically, you'd send this data to the other peer via some signaling method
-    });
-  
-    newPeer.on('error', err => {
-      console.error('Error with initiator peer', err);
-    });
-  
-    setPeer(newPeer);
-  };
-  
-  const handleSignal = () => {
-    const signalingData = document.getElementById("signalingInput").value;
-    const parsedData = JSON.parse(signalingData);
-  
-    const newPeer = new Peer({
-      initiator: false,
-      trickle: false,
-      stream: stream,
-    });
-  
-    newPeer.signal(parsedData);
-  
-    newPeer.on("signal", (data) => {
-      console.log("Receiver Signal Data: ", data);
-      // Typically, you'd send this data back to the initiator
-    });
-  
-    newPeer.on("stream", (partnerStream) => {
-      console.log("Received partner stream");
-      if (partnerVideo.current) {
-        partnerVideo.current.srcObject = partnerStream;
-      }
-    });
-  
-    newPeer.on('error', err => {
-      console.error('Error with receiver peer', err);
-    });
-  
-    setPeer(newPeer);
-  };
+  const createConnection = () => {
+    pc.current.createOffer({
+      offerToReceiveVideo: 1,
+      offerToReceiveAudio: 1,
+    }).then(sdp => {
+      console.log(sdp);
+      pc.current.setLocalDescription(sdp);
+    }).catch(e => console.log(e));
+  }
+
+  const createAnswer = () => {
+    pc.current.createAnswer({
+      offerToReceiveVideo: 1,
+      offerToReceiveAudio: 1,
+    }).then(sdp => {
+      console.log(sdp);
+      pc.current.setLocalDescription(sdp);
+    }).catch(e => console.log(e));
+  }
+
+  const setRemoteDec = () => {
+    const sdp = JSON.parse(textref.current.value);
+    console.log(sdp)
+
+    pc.current.setRemoteDescription(new RTCSessionDescription(sdp));
+  }
+
+  const addCandidate = () => {
+    const candidate = JSON.parse(textref.current.value);
+    console.log("Adding Candidate", candidate)
+
+    pc.current.addIceCandidate(new RTCIceCandidate(candidate));
+  }
 
   return (
     <div>
-      <video ref={userVideo} autoPlay muted playsInline />
-      <video ref={partnerVideo} autoPlay playsInline />
-      <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-5" onClick={callPeer}>Start Call</button>
-      <textarea id="signalingInput" placeholder="Paste signaling data here"></textarea>
-      <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={handleSignal}>Recive Call</button>
+      <Navbar />
+      <div className="mx-auto  justify-items-center max-w-screen-xl px-4 py-32 ">
+        <div className="grid grid-cols-2 gap-4 justify-items-center">
+          <video className="w-96 h-72 m-5 bg-slate-200 shadow-lg rounded-2xl saturate-150" ref={userVideo} autoPlay muted playsInline />
+          <video className="w-96 h-72 m-5 bg-slate-200 shadow-lg rounded-2xl saturate-150" ref={partnerVideo} autoPlay playsInline />
+        </div>
+
+        <br />
+        <button className="bg-black text-white px-5 py-3 m-5 rounded-lg" onClick={createConnection}> Create Connection</button>
+        <button className="bg-black text-white px-5 py-3 m-5 rounded-lg" onClick={createAnswer}> Create Answer</button>
+        
+        <br />
+        <textarea ref={textref}></textarea>
+        <br />
+        <button className="bg-black text-white px-5 py-3 m-5 rounded-lg" onClick={setRemoteDec}> Set Remote</button>
+        <button className="bg-black text-white px-5 py-3 m-5 rounded-lg" onClick={addCandidate}> Add Candidates</button>
+      </div>
     </div>
   );
 }
