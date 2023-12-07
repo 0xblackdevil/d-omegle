@@ -1,5 +1,13 @@
 import React, {  useEffect, useRef } from "react";
 import Navbar from "./navbar";
+import io from 'socket.io-client';
+
+const socket = io(
+  '/webRTCPeers',
+  {
+    path: '/webrtc'
+  }
+)
 
 export default function PeerVideo() {
 
@@ -7,9 +15,24 @@ export default function PeerVideo() {
   const partnerVideo = useRef();
   const textref = useRef();
   const pc = useRef(new RTCPeerConnection(null));
+  const candidates = useRef([]);
 
   // Access the user's media devices
   useEffect(() => {
+    socket.on('connection-success', success => {
+      console.log(success);
+    })
+
+    socket.on('sdp', data => {
+      console.log(data);
+      textref.current.value = JSON.stringify(data.sdp)
+    })
+
+    socket.on('candidate', data => {
+      console.log(data)
+      candidates.current = [ ...candidates.current, data]
+    })
+
     navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
       .then((currentStream) => {
@@ -27,6 +50,7 @@ export default function PeerVideo() {
     _pc.onicecandidate = (e) => {
       if (e.candidate) {
         console.log(JSON.stringify(e.candidate));
+        socket.emit('candidate', e.candidate);
       }
     }
 
@@ -51,6 +75,11 @@ export default function PeerVideo() {
     }).then(sdp => {
       console.log(sdp);
       pc.current.setLocalDescription(sdp);
+
+      // send the sdp to the server
+      socket.emit('sdp', {
+        sdp,
+      })
     }).catch(e => console.log(e));
   }
 
@@ -61,6 +90,11 @@ export default function PeerVideo() {
     }).then(sdp => {
       console.log(sdp);
       pc.current.setLocalDescription(sdp);
+
+      // send answer to the server..
+      socket.emit('sdp', {
+        sdp
+      })
     }).catch(e => console.log(e));
   }
 
@@ -72,10 +106,14 @@ export default function PeerVideo() {
   }
 
   const addCandidate = () => {
-    const candidate = JSON.parse(textref.current.value);
-    console.log("Adding Candidate", candidate)
+    // const candidate = JSON.parse(textref.current.value);
+    // console.log("Adding Candidate", candidate)
 
-    pc.current.addIceCandidate(new RTCIceCandidate(candidate));
+    candidates.current.forEach(candidate => {
+      console.log(candidate);
+      pc.current.addIceCandidate(new RTCIceCandidate(candidate));
+    })
+
   }
 
   return (
