@@ -16,7 +16,7 @@
     "socket.io-client": "^4.7.2",
     "web-vitals": "^2.1.4"
   },
-  "proxy" : "http://localhost:8080",
+  "proxy" : "https://d-omegle-server.onrender.com/",
   "scripts": {
     "start": "react-app-rewired start",
     "build": "react-app-rewired build",
