@@ -1,14 +1,13 @@
 const express = require('express');
-const io = require('socket.io')({
-    path: '/webrtc'
-});
+const newServer = require('http').createServer();
+const io = require('socket.io')(newServer, { path: '/webrtc' });
 
 const app = express()
 const port = 8080
 
-app.get('/', (req, res)=> res.send("Hello, WebRTC!"));
+app.get('/', (req, res) => res.send("Hello, WebRTC!"));
 
-const server = app.listen(port, ()=>{
+const server = app.listen(port, () => {
     console.log(`WebRTC app is listening on port ${port}`)
 })
 
@@ -17,7 +16,7 @@ io.listen(server);
 const webRTCNamespace = io.of('/webRTCPeers')
 
 webRTCNamespace.on('connection', socket => {
-    console.log(socket.id) 
+    console.log(socket.id)
 
     socket.emit('connection-success', {
         status: "connection-success",

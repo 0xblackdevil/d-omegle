@@ -5,11 +5,25 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { MetaMaskProvider } from 'metamask-react';
 
+import { HuddleClient, HuddleProvider } from '@huddle01/react';
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
+const huddleClient = new HuddleClient({
+  projectId: process.env.HUDDLE_PROJECT_ID,
+  options: {
+    activeSpeakers: {
+      size: 2,
+    },
+  },
+});
+
 root.render(
   <React.StrictMode>
     <MetaMaskProvider>
-      <App />
+      <HuddleProvider key="huddle01-provider" client={huddleClient}>
+        <App />
+      </HuddleProvider>
     </MetaMaskProvider>
   </React.StrictMode>
 );
